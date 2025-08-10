@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "identifier": "com.heshui.water-reminder",
   "build": {
-    "frontendDist": "../dist",
-    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
   },
   "app": {
     "windows": [
@@ -21,6 +21,15 @@
     ],
     "security": {
       "csp": null
+    },
+    "allowlist": {
+      "all": false,
+      "notification": {
+        "all": true
+      },
+      "shell": {
+        "all": true
+      }
     }
   },
   "bundle": {

@@ -1,0 +1,13 @@
+{
+  "name": "water-reminder-root",
+  "private": true,
+  "scripts": {
+    "start-backend": "node backend/index.js",
+    "start-frontend": "npm --prefix frontend run dev",
+    "start-tauri": "npm --prefix frontend run tauri:dev",
+    "start": "concurrently \"npm run start-backend\" \"npm run start-tauri\""
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0"
+  }
+}

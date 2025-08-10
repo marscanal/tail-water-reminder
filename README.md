@@ -1,65 +1,70 @@
-# 喝水提醒小助手 (前后端分离 + Tauri 桌面应用)
+# 喝水提醒小助手 (Tauri + Capacitor + Node.js)
 
-## 结构
-- `backend`: FastAPI 后端，提供 REST API 并使用 CSV 存储每日饮水量。
-- `frontend`: Vue 3 + Vite 前端，可作为 Web 应用运行，也通过 Tauri 打包为桌面应用。
+一个跨平台的喝水提醒应用，支持 Windows 桌面和 Android 移动端。
 
-## 运行
+## 技术架构
 
-### 1. 启动后端服务
-后端服务为前端和桌面应用提供数据接口。
+- **后端**: Node.js + Express + WebSocket，负责定时任务调度。
+- **桌面端 (Windows)**: Tauri + Vue 3，Tauri 负责创建桌面应用外壳，并在启动时自动运行内置的 Node.js 后端。
+- **移动端 (Android)**: Capacitor + Vue 3，将前端应用打包成原生 Android App。
+- **核心逻辑**:
+    - **Windows**: 由 Node.js 后端定时通过 WebSocket 向 Tauri 前端发送通知指令，前端调用系统原生通知。
+    - **Android**: 由 Capacitor App 在本地通过 `setInterval` 创建定时器，并调用 Capacitor 本地通知插件来发送通知，以适应移动端环境。
 
-```bash
-# 进入后端目录
-cd backend
+## 项目结构
 
-# (如果初次运行) 创建并激活虚拟环境，安装依赖
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
+- `backend/`: Node.js 后端服务。
+- `frontend/`: Vue 3 前端项目，同时也是 Tauri 和 Capacitor 的容器。
+    - `src/`: 前端源码。
+    - `src-tauri/`: Tauri 的 Rust 源码和配置。
+    - `capacitor.config.json`: Capacitor 配置文件。
+- `package.json`: 项目根目录的 `package.json`，用于统一管理和启动项目。
 
-# 启动 FastAPI 服务
-uvicorn app:app --reload --port 8000
-```
+## 如何使用
 
-### 2. 启动前端
+### 1. 环境准备
 
-#### 方式一：在浏览器中运行
+- 安装 [Node.js](https://nodejs.org/)
+- 安装 [Rust](https://www.rust-lang.org/tools/install) 环境（用于 Tauri）
+- 安装 [Android Studio](https://developer.android.com/studio)（用于安卓打包）
+- 在项目根目录运行 `npm install` 来安装所有依赖。
 
-```bash
-# 进入前端目录
-cd frontend
+### 2. 开发模式运行 (Windows 桌面)
 
-# (如果初次运行) 安装依赖
-npm install
-
-# 启动 Vite 开发服务器
-npm run dev
-```
-在浏览器中打开 `http://localhost:5173`。Vite 开发服务器已配置将 `/api` 请求代理到 `http://localhost:8000`。
-
-#### 方式二：作为 Tauri 桌面应用运行
-
-确保后端服务已在运行。
+在项目**根目录**运行以下命令：
 
 ```bash
-# 进入前端目录
-cd frontend
-
-# (如果初次运行) 安装依赖
-npm install
-
-# 启动 Tauri 开发模式
-npm run tauri:dev
+npm run start
 ```
-这将启动一个本地桌面窗口来调试应用。
 
-## 提醒策略说明
+此命令会使用 `concurrently` 同时启动两项服务：
+1.  Node.js 后端服务。
+2.  Tauri 开发窗口，并加载前端应用。
 
-* 本实现把提醒逻辑放在前端：前端从后端读取提醒配置（间隔、站立时长、是否启用），并用 `setInterval` 在客户端触发本地 Notification。好处是无需在服务器维持长连接或后台任务；缺点是在浏览器关闭或页面刷新时提醒会停止。若需要后台持续提醒，可将定时任务放到后端并使用系统通知或额外客户端守护进程。
+应用启动后，会根据默认间隔（30分钟）发送桌面通知。你可以在应用内修改提醒间隔。
 
-## 可改进点
+### 3. 打包和运行安卓 App
 
-* 使用 SQLite 或数据库代替 CSV，增加并发与完整性。
-* 使用 WebSocket 推送或 Server-Side scheduling (APScheduler) 实现后端主动推送。
-* 加入用户账号/多用户支持并保存历史图表。
+1.  **进入前端目录**:
+    ```bash
+    cd frontend
+    ```
+
+2.  **添加 Android 平台** (只需运行一次):
+    ```bash
+    npx cap add android
+    ```
+
+3.  **同步前端代码和依赖**到 Android 项目:
+    ```bash
+    npx cap sync
+    ```
+
+4.  **在 Android Studio 中打开项目**:
+    ```bash
+    npx cap open android
+    ```
+
+5.  在 Android Studio 中，你可以：
+    -  点击 "Run 'app'" 按钮，在连接的设备或模拟器上运行 App。
+    -  通过 `Build > Build Bundle(s) / APK(s) > Build APK(s)` 来生成可安装的 APK 文件。

@@ -1,79 +1,47 @@
-<template>
-  <div style="max-width:640px;margin:30px auto;font-family:Helvetica, Arial;">
-    <h2>喝水提醒小助手</h2>
-    <ReminderStatus :status="status" />
-    <WaterProgress :status="status" @change="fetchStatus" />
-    <SettingsForm :settings="status" @update="onSettingsUpdate" />
-  </div>
-</template>
-
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import api from './api'
-import WaterProgress from './components/WaterProgress.vue'
-import SettingsForm from './components/SettingsForm.vue'
-import ReminderStatus from './components/ReminderStatus.vue'
+import { ref, onMounted } from 'vue';
+import { initNotificationListener, setReminderInterval } from './services/notify';
+import { sendNotification, requestPermission, isPermissionGranted } from '@tauri-apps/api/notification';
 
-const status = ref({})
-let waterTimer = null
-let standTimer = null
+const minutes = ref(30);
 
-async function fetchStatus() {
-  try {
-    const res = await api.getStatus()
-    status.value = res.data
-  } catch (e) { console.error(e) }
+function updateInterval() {
+  setReminderInterval(minutes.value);
 }
 
-function startWaterReminder() {
-  clearInterval(waterTimer)
-  if (!status.value.reminder_interval_minutes) return
-  const intervalMs = status.value.reminder_interval_minutes * 60 * 1000
-  waterTimer = setInterval(() => {
-    showNotification('喝水提醒', '该喝水啦！')
-    if (status.value.stand_enabled) {
-      startStandCountdown()
-    }
-  }, intervalMs)
-}
+async function sendTestNotification() {
+  let permissionGranted = await isPermissionGranted();
+  if (!permissionGranted) {
+    const permissionResult = await requestPermission();
+    permissionGranted = permissionResult === 'granted';
+  }
 
-function startStandCountdown() {
-  clearTimeout(standTimer)
-  const standMs = (status.value.stand_duration_minutes || 3) * 60 * 1000
-  console.log(`开始站立计时 ${standMs/60000} 分钟`)
-  standTimer = setTimeout(() => {
-    console.log('可以坐下休息了')
-    showNotification('站立结束', '可以坐下休息了')
-  }, standMs)
-}
-
-function showNotification(title, body) {
-  if (Notification.permission === 'granted') {
-    new Notification(title, { body })
-  } else if (Notification.permission !== 'denied') {
-    Notification.requestPermission().then((permission) => {
-      if (permission === 'granted') {
-        new Notification(title, { body })
-      }
-    })
+  if (permissionGranted) {
+    sendNotification({
+      title: "测试通知",
+      body: "这是一条来自 Tauri 的测试消息！",
+    });
+  } else {
+    alert("你必须先允许通知权限！");
   }
 }
 
-function onSettingsUpdate() {
-  fetchStatus().then(() => {
-    startWaterReminder()
-  })
-}
-
 onMounted(() => {
-  fetchStatus().then(() => {
-    startWaterReminder()
-  })
-})
-
-onBeforeUnmount(() => {
-  clearInterval(waterTimer)
-  clearTimeout(standTimer)
-})
+  // For desktop, we listen for notifications from the backend
+  initNotificationListener();
+});
 </script>
 
+<template>
+  <div>
+    <h1>喝水提醒</h1>
+    <div>
+      <label>提醒间隔（分钟）：</label>
+      <input type="number" v-model="minutes" />
+      <button @click="updateInterval">更新间隔</button>
+    </div>
+    <div style="margin-top: 20px;">
+      <button @click="sendTestNotification">发送测试通知</button>
+    </div>
+  </div>
+</template>
