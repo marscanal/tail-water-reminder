@@ -14,6 +14,11 @@ python -m venv .venv
 pip install -r requirements.txt
 uvicorn app:app --reload --port 8000
 ```
+```bash
+cd backend
+.venv\Scripts\activate
+uvicorn app:app --reload --port 8000
+```
 
 2. 启动前端
 
